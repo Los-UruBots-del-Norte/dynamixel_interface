@@ -3,6 +3,7 @@ import rospy
 from geometry_msgs.msg import * 
 from std_msgs.msg import Int64
 import random
+from std_msgs.msg import Int32MultiArray
 from dynamixel_sdk import * # Uses Dynamixel SDK library
 
 #********* DYNAMIXEL Model definition *********
@@ -44,14 +45,17 @@ elif MY_DXL == 'XL320':
     DXL_MINIMUM_POSITION_VALUE  = 0         # Refer to the CW Angle Limit of product eManual
     DXL_MAXIMUM_POSITION_VALUE  = 1023      # Refer to the CCW Angle Limit of product eManual
     BAUDRATE                    = 1000000   # Default Baudrate of XL-320 is 1Mbps
+elif MY_DXL == '2XL430':
+    ADDR_TORQUE_ENABLE          = 64
+    ADDR_GOAL_POSITION          = 116
+    ADDR_PRESENT_POSITION       = 132
+    DXL_MINIMUM_POSITION_VALUE  = 52         # Refer to the CW Angle Limit of product eManual
+    DXL_MAXIMUM_POSITION_VALUE  = 48      # Refer to the CCW Angle Limit of product eManual
+    BAUDRATE                    = 1000000   # Default Baudrate of XL-320 is 1Mbps
 
-# DYNAMIXEL Protocol Version (1.0 / 2.0)
-# https://emanual.robotis.com/docs/en/dxl/protocol2/
+
 PROTOCOL_VERSION            = 2.0
 
-# Factory default ID of all DYNAMIXEL is 1
-
-# Use the actual port assigned to the U2D2.
 # ex) Windows: "COM*", Linux: "/dev/ttyUSB*", Mac: "/dev/tty.usbserial-*"
 DEVICENAME                  = '/dev/ttyACM0'
 
@@ -85,60 +89,7 @@ def apply_pwm(DXL_ID, goal):
     if dxl_comm_result != COMM_SUCCESS:
         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))      
     elif dxl_error != 0:
-        print("%s" % packetHandler.getRxPacketError(dxl_error))
-      
-    # while 1:
-    #     # Read present position
-    #     if (MY_DXL == 'XL320'): # XL320 uses 2 byte Position Data, Check the size of data in your DYNAMIXEL's control table
-    #         dxl_present_position, dxl_comm_result, dxl_error = packetHandler.read2ByteTxRx(portHandler, DXL_ID, ADDR_PRESENT_POSITION)
-    #     else:
-    #         dxl_present_position, dxl_comm_result, dxl_error = packetHandler.read4ByteTxRx(portHandler, DXL_ID, ADDR_PRESENT_POSITION)
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
-
-    #     print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (DXL_ID, dxl_goal_position[index], dxl_present_position))
-
-    #     if not abs(dxl_goal_position[index] - dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD:
-    #         break
-        
-    # print("Press any key to CONTINUE or CTR+C to STOP (or press ESC to CLOSE PORTS!)")
-    # if getch() == chr(0x1b):
-    #     # Disable Dynamixel Torque
-    #     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, 11, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
-
-    #     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, 12, ADDR_TORQUE_ENABLE,
-    #                                                               TORQUE_DISABLE)
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
-
-    #     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, 13, ADDR_TORQUE_ENABLE,
-    #                                                               TORQUE_DISABLE)
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
-
-    #     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, 14, ADDR_TORQUE_ENABLE,
-    #                                                               TORQUE_DISABLE)
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
-
-    #     dxl_comm_result, dxl_error = packetHandler.write1ByteTxRx(portHandler, 15, ADDR_TORQUE_ENABLE,
-    #                                                               TORQUE_DISABLE)
-    #     if dxl_comm_result != COMM_SUCCESS:
-    #         print("%s" % packetHandler.getTxRxResult(dxl_comm_result))
-    #     elif dxl_error != 0:
-    #         print("%s" % packetHandler.getRxPacketError(dxl_error))
+        print("%s" % packetHandler.getRxPacketError(dxl_error))  
 
 def read_pwm_motors(DXL_ID):
      # Read present position
@@ -155,24 +106,26 @@ def read_pwm_motors(DXL_ID):
 
     return dxl_present_position
 
-def pwm_motor_1_callback(data):
-    apply_pwm(DXL_ID_1, data.data)
-          
+def pwm_motor_callback(data):
+    apply_pwm(DXL_ID_1, data.data[0])	          
+    apply_pwm(DXL_ID_2, data.data[1])
+    apply_pwm(DXL_ID_3, data.data[2])
+    apply_pwm(DXL_ID_4, data.data[3])
+
 def pwm_motor_2_callback(data):
-    apply_pwm(DXL_ID_2, data.data)
-    
+    apply_pwm(DXL_ID_2, data.data[0])
+
 def pwm_motor_3_callback(data):
-    apply_pwm(DXL_ID_3, data.data)
-        
+    apply_pwm(DXL_ID_3, data.data[0])
+
 def pwm_motor_4_callback(data):
-    apply_pwm(DXL_ID_4, data.data)
-    
+    apply_pwm(DXL_ID_4, data.data[0])
+
 if __name__=="__main__":
     rospy.init_node("dynamixel_interface_node", anonymous=False)
 
     index = 0
     dxl_goal_position = [1500, DXL_MAXIMUM_POSITION_VALUE]         # Goal position
-
 
     # Initialize PortHandler instance
     # Set the port path
@@ -190,25 +143,8 @@ if __name__=="__main__":
     # Set port baudrate
     if portHandler.setBaudRate(BAUDRATE):
         print("Succeeded to change the baudrate")
+    #print("callback1")
+    rospy.Subscriber("/ssl_robot_9/motor/write_pwm", Int32MultiArray, pwm_motor_callback)
 
-    rospy.Subscriber("/ssl_robot/motor_1/write_pwm", Int64, pwm_motor_1_callback)
-    rospy.Subscriber("/ssl_robot/motor_2/write_pwm", Int64, pwm_motor_2_callback)
-    rospy.Subscriber("/ssl_robot/motor_3/write_pwm", Int64, pwm_motor_3_callback)
-    rospy.Subscriber("/ssl_robot/motor_4/write_pwm", Int64, pwm_motor_4_callback)
-
-    #rospy.spin()
-
-    pub_read_1 = rospy.Publisher("/ssl_robot/motor_1/read_pwm", Int64, queue_size=10)
-    pub_read_2 = rospy.Publisher("/ssl_robot/motor_2/read_pwm", Int64, queue_size=10)
-    pub_read_3 = rospy.Publisher("/ssl_robot/motor_3/read_pwm", Int64, queue_size=10)
-    pub_read_4 = rospy.Publisher("/ssl_robot/motor_4/read_pwm", Int64, queue_size=10)
-    r = rospy.Rate(5)
-    velocity = Twist()
-    while not rospy.is_shutdown():
-        pub_read_1.publish(read_pwm_motors(DXL_ID_1))
-        pub_read_2.publish(read_pwm_motors(DXL_ID_2)) 
-        pub_read_3.publish(read_pwm_motors(DXL_ID_3)) 
-        pub_read_4.publish(read_pwm_motors(DXL_ID_4)) 
-        r.sleep()
-
+    rospy.spin()
 
